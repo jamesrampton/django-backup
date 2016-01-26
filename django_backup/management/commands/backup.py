@@ -494,7 +494,10 @@ class Command(BaseBackupCommand):
             self.stderr.writeln('cleaned nothing, because BACKUP_MEDIA_COPIES is missing')
 
     def do_media_rsync_backup(self):
-        
+        if self.rsyncnosymlink:
+            rsync_options = '-rlptgoDz'
+        else:
+            rsync_options = '-az --copy-dirlinks'
         # Local media rsync backup
         
         if not self.delete_local and not self.no_local:
@@ -507,7 +510,10 @@ class Command(BaseBackupCommand):
                 'local_backup_target': local_backup_target,
                 'rsync_flag': GOOD_RSYNC_FLAG,
             }
-            local_rsync_cmd = 'rsync -az --copy-dirlinks --link-dest=%(local_current_backup)s %(all_directories)s %(local_backup_target)s' % local_info
+            # We used to use -az, which equals to -rlptgoD and -z.
+            # Now we need more control over this, using -rptgoD instead of -a to disable symlink backup.
+            local_info.update({'rsync_options': rsync_options, })
+            local_rsync_cmd = 'rsync %(rsync_options)s --link-dest=%(local_current_backup)s %(all_directories)s %(local_backup_target)s' % local_info
             local_mark_cmd = 'touch %(local_backup_target)s/%(rsync_flag)s' % local_info
             local_link_cmd = 'rm -f %(local_current_backup)s && ln -s %(local_backup_target)s %(local_current_backup)s' % local_info
             cmd = '\n'.join(['%s&&%s' % (local_rsync_cmd, local_mark_cmd), local_link_cmd])
@@ -529,7 +535,8 @@ class Command(BaseBackupCommand):
                 'rsync_flag': GOOD_RSYNC_FLAG,
             }
             
-            remote_rsync_cmd = 'rsync -az --copy-dirlinks --link-dest=%(remote_current_backup)s %(all_directories)s %(host)s:%(remote_backup_target)s' % remote_info
+            remote_info.update({'rsync_options': rsync_options, })
+            remote_rsync_cmd = 'rsync %(rsync_options)s --link-dest=%(remote_current_backup)s %(all_directories)s %(host)s:%(remote_backup_target)s' % remote_info
             remote_mark_cmd = 'ssh %(host)s "touch %(remote_backup_target)s/%(rsync_flag)s"' % remote_info
             remote_link_cmd = 'ssh %(host)s "rm -f %(remote_current_backup)s && ln -s %(remote_backup_target)s %(remote_current_backup)s"' % remote_info
             
