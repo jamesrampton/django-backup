@@ -23,6 +23,7 @@ from django.db import connection
 
 # Based on: http://www.djangosnippets.org/snippets/823/
 # Based on: http://www.yashh.com/blog/2008/sep/05/django-database-backup-view/
+
 class Command(BaseBackupCommand):
     
     option_list = BaseCommand.option_list + (
@@ -131,6 +132,7 @@ class Command(BaseBackupCommand):
             self.close_connection()
 
     def _handle(self, *args, **options):
+        
         self.time_suffix = time.strftime(TIME_FORMAT)
         self.email = options.get('email')
         self.ftp = options.get('ftp')
@@ -220,8 +222,8 @@ class Command(BaseBackupCommand):
             outfile = compressed_outfile
 
         if self.zipencrypt:
-            zip_encrypted_outfile = "{}.zip".format(outfile)
-            self.stdout.write('Zipping and cncrypting backup file {} to {}'.format(outfile, zip_encrypted_outfile))
+            zip_encrypted_outfile = "%s.zip" % outfile
+            self.stdout.write('Zipping and cncrypting backup file %s to %s' % (outfile, zip_encrypted_outfile))
             self.do_encrypt(outfile, zip_encrypted_outfile)
             outfile = zip_encrypted_outfile
 
@@ -281,16 +283,13 @@ class Command(BaseBackupCommand):
 
     def store_ftp(self, local_files=None):
         
+        self.ensure_remote_dir_exists()
+        
         if not local_files:
             local_files = []
             
         sftp = self.get_connection()
         
-        if self.remote_dir:
-            try:
-                sftp.mkdir(self.remote_dir)
-            except IOError:
-                pass
         for local_file in local_files:
             filename = os.path.split(local_file)[-1]
             self.stdout.write('Saving %s to remote server ' % local_file)
@@ -420,26 +419,26 @@ class Command(BaseBackupCommand):
             self.stderr.write('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing\n')
 
     def clean_remote_surplus_db(self):
+    
+        self.ensure_remote_dir_exists()
+        
         try:
             sftp = self.get_connection()
-            try:
-                backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
-                backups = list(filter(is_db_backup, backups))
-                backups.sort()
+            backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
+            backups = list(filter(is_db_backup, backups))
+            backups.sort()
+            self.stdout.write('=' * 70)
+            self.stdout.write('remote db backups found: %s' % backups)
+            remove_list = decide_remove(backups, settings.BACKUP_DATABASE_COPIES)
+            self.stdout.write('=' * 70)
+            self.stdout.write('remote db backups to clean %s' % remove_list)
+            if remove_list:
                 self.stdout.write('=' * 70)
-                self.stdout.write('remote db backups found: %s' % backups)
-                remove_list = decide_remove(backups, settings.BACKUP_DATABASE_COPIES)
-                self.stdout.write('=' * 70)
-                self.stdout.write('remote db backups to clean %s' % remove_list)
-                if remove_list:
-                    self.stdout.write('=' * 70)
-                    self.stdout.write('cleaning up remote db backups')
-                    for file_ in remove_list:
-                        target_path = os.path.join(self.remote_dir, file_)
-                        self.stdout.write('Removing {}'.format(target_path))
-                        sftp.remove(target_path)
-            except IOError:
-                self.stderr.write('Cleaned nothing, Remote dir doesn\'t exist\n')
+                self.stdout.write('cleaning up remote db backups')
+                for file_ in remove_list:
+                    target_path = os.path.join(self.remote_dir, file_)
+                    self.stdout.write('Removing %s' % target_path)
+                    sftp.remove(target_path)
         except ImportError:
             self.stderr.write('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing\n')
 
@@ -474,27 +473,27 @@ class Command(BaseBackupCommand):
             self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
     def clean_remote_surplus_media(self):
+    
+        self.ensure_remote_dir_exists()
+        
         try:
             sftp = self.get_connection()
-            try:
-                backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
-                backups = list(filter(is_media_backup, backups))
-                backups.sort()
+            backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
+            backups = list(filter(is_media_backup, backups))
+            backups.sort()
+            self.stdout.write('=' * 70)
+            self.stdout.write('remote media backups found: %s' % backups)
+            remove_list = decide_remove(backups, settings.BACKUP_MEDIA_COPIES)
+            self.stdout.write('=' * 70)
+            self.stdout.write('remote media backups to clean %s' % remove_list)
+            if remove_list:
                 self.stdout.write('=' * 70)
-                self.stdout.write('remote media backups found: %s' % backups)
-                remove_list = decide_remove(backups, settings.BACKUP_MEDIA_COPIES)
-                self.stdout.write('=' * 70)
-                self.stdout.write('remote media backups to clean %s' % remove_list)
-                if remove_list:
-                    self.stdout.write('=' * 70)
-                    self.stdout.write('cleaning up remote media backups')
-                    for file_ in remove_list:
-                        target_path = os.path.join(self.remote_dir, file_)
-                        self.stdout.write('Removing {}'.format(target_path))
-                        command = 'rm -r {}'.format(target_path)
-                        sftp.execute(command)
-            except IOError:
-                self.stderr.write('Cleaned nothing, Remote dir doesn\'t exist\n')
+                self.stdout.write('cleaning up remote media backups')
+                for file_ in remove_list:
+                    target_path = os.path.join(self.remote_dir, file_)
+                    self.stdout.write('Removing %s' % target_path)
+                    command = 'rm -r %s' % target_path
+                    sftp.execute(command)
         except ImportError:
             self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
@@ -517,7 +516,7 @@ class Command(BaseBackupCommand):
             }
             # We used to use -az, which equals to -rlptgoD and -z.
             # Now we need more control over this, using -rptgoD instead of -a to disable symlink backup.
-            local_info.update({'rsync_options': rsync_options, })
+            local_info.update({'rsync_options': rsync_options})
             local_rsync_cmd = 'rsync %(rsync_options)s --link-dest=%(local_current_backup)s %(all_directories)s %(local_backup_target)s' % local_info
             local_mark_cmd = 'touch %(local_backup_target)s/%(rsync_flag)s' % local_info
             local_link_cmd = 'rm -f %(local_current_backup)s && ln -s %(local_backup_target)s %(local_current_backup)s' % local_info
@@ -528,7 +527,11 @@ class Command(BaseBackupCommand):
         # Remote media rsync backup
         
         if self.ftp:
+            
             self.stdout.write('Doing remote media rsync backup')
+            
+            self.ensure_remote_dir_exists()
+            
             host = '%s@%s' % (self.ftp_username, self.ftp_server)
             remote_current_backup = os.path.join(self.remote_dir, 'current')
             remote_backup_target = os.path.join(self.remote_dir, 'dir_%s' % self.time_suffix)
@@ -547,11 +550,6 @@ class Command(BaseBackupCommand):
             
             cmd = '\n'.join(['%s&&%s' % (remote_rsync_cmd, remote_mark_cmd), remote_link_cmd])
             self.stdout.write(cmd)
-            sftp = self.get_connection()
-            try:
-                sftp.mkdir(self.remote_dir)
-            except IOError:
-                pass
             os.system(cmd)
 
     def clean_broken_rsync(self):
@@ -559,6 +557,9 @@ class Command(BaseBackupCommand):
         self.clean_remote_broken_rsync()
 
     def clean_remote_broken_rsync(self):
+    
+        self.ensure_remote_dir_exists()
+        
         sftp = self.get_connection()
         backups = [i.strip() for i in sftp.execute('ls %s' % self.remote_dir)]
         backups = list(filter(is_media_backup, backups))
@@ -590,3 +591,14 @@ class Command(BaseBackupCommand):
         full_cmd = '\n'.join(commands)
         self.stdout.write(full_cmd)
         os.system(full_cmd)
+
+    def ensure_remote_dir_exists(self):
+        if self.remote_dir:
+            sftp = self.get_connection()
+            try:
+                self.stdout.write('Creating remote dir: %s' % self.remote_dir)
+                sftp.makedirs(self.remote_dir)
+            except IOError:
+                self.stderr.write('Failed to create remote dir: %s Attempting to continue\n' % self.remote_dir)
+        else:
+            self.stderr.write('Remote action called but no remote dir set')
