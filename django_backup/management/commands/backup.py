@@ -202,7 +202,7 @@ class Command(BaseBackupCommand):
         outfile = os.path.join(self.backup_dir, 'backup_%s.sql' % self.time_suffix)
 
         # Doing backup
-        if self.engine == 'django.db.backends.mysql':
+        if self.engine == 'django.db.backends.mysql' or 'mysql' in self.engine:
             self.stdout.write('Doing Mysql backup to database %s into %s' % (self.db, outfile))
             self.do_mysql_backup(outfile)
         # TODO reinstate postgres support
@@ -355,7 +355,7 @@ class Command(BaseBackupCommand):
         if self.passwd:
             args += ["--password='%s'" % self.passwd]
         if self.host:
-            args += ["--host='%s'" % self.host]
+            args += ["--{}='{}'".format("socket" if self.host.startswith('/') else "host", self.host)]
         if self.port:
             args += ["--port=%s" % self.port]
         args += [self.db]

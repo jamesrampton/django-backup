@@ -1,9 +1,10 @@
 import io
 from setuptools import find_packages, setup
+from django_backup import __version__
 
 setup(
     name='django-backup',
-    version='2.0.0',
+    version=__version__,
     description='A backup script for the Django admin',
     long_description=io.open('README.rst', encoding='utf-8').read(),
     author='Dmitriy Kovalev, Michael Huynh, msaelices, Andy Baker, Chen Zhe, Chris Cohoat',
