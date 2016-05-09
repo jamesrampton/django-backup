@@ -422,23 +422,26 @@ class Command(BaseBackupCommand):
     def clean_remote_surplus_db(self):
         try:
             sftp = self.get_connection()
-            backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
-            backups = list(filter(is_db_backup, backups))
-            backups.sort()
-            self.stdout.write('=' * 70)
-            self.stdout.write('remote db backups found: %s' % backups)
-            remove_list = decide_remove(backups, settings.BACKUP_DATABASE_COPIES)
-            self.stdout.write('=' * 70)
-            self.stdout.write('remote db backups to clean %s' % remove_list)
-            if remove_list:
+            try:
+                backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
+                backups = list(filter(is_db_backup, backups))
+                backups.sort()
                 self.stdout.write('=' * 70)
-                self.stdout.write('cleaning up remote db backups')
-                for file_ in remove_list:
-                    target_path = os.path.join(self.remote_dir, file_)
-                    self.stdout.write('Removing {}'.format(target_path))
-                    sftp.remove(target_path)
+                self.stdout.write('remote db backups found: %s' % backups)
+                remove_list = decide_remove(backups, settings.BACKUP_DATABASE_COPIES)
+                self.stdout.write('=' * 70)
+                self.stdout.write('remote db backups to clean %s' % remove_list)
+                if remove_list:
+                    self.stdout.write('=' * 70)
+                    self.stdout.write('cleaning up remote db backups')
+                    for file_ in remove_list:
+                        target_path = os.path.join(self.remote_dir, file_)
+                        self.stdout.write('Removing {}'.format(target_path))
+                        sftp.remove(target_path)
+            except IOError:
+                self.stderr.writeln('Cleaned nothing, Remote dir doesn\'t exist')
         except ImportError:
-            self.stderr.writeln('cleaned nothing, because BACKUP_DATABASE_COPIES is missing')
+            self.stderr.writeln('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing')
 
     def clean_surplus_db(self):
         self.clean_local_surplus_db()
