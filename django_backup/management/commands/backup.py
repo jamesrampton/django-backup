@@ -476,23 +476,25 @@ class Command(BaseBackupCommand):
     def clean_remote_surplus_media(self):
         try:
             sftp = self.get_connection()
-            backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
-            backups = list(filter(is_media_backup, backups))
-            backups.sort()
-            self.stdout.write('=' * 70)
-            self.stdout.write('remote media backups found: %s' % backups)
-            remove_list = decide_remove(backups, settings.BACKUP_MEDIA_COPIES)
-            self.stdout.write('=' * 70)
-            self.stdout.write('remote media backups to clean %s' % remove_list)
-            if remove_list:
+            try:
+                backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
+                backups = list(filter(is_media_backup, backups))
+                backups.sort()
                 self.stdout.write('=' * 70)
-                self.stdout.write('cleaning up remote media backups')
-                for file_ in remove_list:
-                    target_path = os.path.join(self.remote_dir, file_)
-                    self.stdout.write('Removing {}'.format(target_path))
-                    command = 'rm -r {}'.format(target_path)
-                    sftp.execute(command)
-
+                self.stdout.write('remote media backups found: %s' % backups)
+                remove_list = decide_remove(backups, settings.BACKUP_MEDIA_COPIES)
+                self.stdout.write('=' * 70)
+                self.stdout.write('remote media backups to clean %s' % remove_list)
+                if remove_list:
+                    self.stdout.write('=' * 70)
+                    self.stdout.write('cleaning up remote media backups')
+                    for file_ in remove_list:
+                        target_path = os.path.join(self.remote_dir, file_)
+                        self.stdout.write('Removing {}'.format(target_path))
+                        command = 'rm -r {}'.format(target_path)
+                        sftp.execute(command)
+            except IOError:
+                self.stderr.write('Cleaned nothing, Remote dir doesn\'t exist\n')
         except ImportError:
             self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
