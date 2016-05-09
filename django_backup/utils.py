@@ -111,6 +111,22 @@ def reserve_interval(backups, type, num):
     return result
 
 
+def get_setting(key, default):
+    """
+    This helper abstracts away some behaviour we encountered when working
+    with setting-overrides inside of tests. Here the settings object is already
+    patched to always return a None if a non-existing attribute is requested
+    hence a normal getattr no longer works.
+
+    Use this when you expect a None value to represent a not-existing
+    setting.
+    """
+    value = getattr(settings, key, None)
+    if value is None:
+        return default
+    return value
+
+
 class BaseBackupCommand(BaseCommand):
     def __init__(self):
 
@@ -131,12 +147,12 @@ class BaseBackupCommand(BaseCommand):
             self.host = settings.DATABASE_HOST
             self.port = settings.DATABASE_PORT
 
-        self.backup_dir = getattr(settings, 'BACKUP_LOCAL_DIRECTORY', os.getcwd())
-        self.remote_dir = getattr(settings, 'BACKUP_FTP_DIRECTORY', '')
-        self.remote_restore_dir = getattr(settings, 'RESTORE_FROM_FTP_DIRECTORY', self.remote_dir)
-        self.ftp_server = getattr(settings, 'BACKUP_FTP_SERVER', '')
-        self.ftp_username = getattr(settings, 'BACKUP_FTP_USERNAME', '')
-        self.ftp_password = getattr(settings, 'BACKUP_FTP_PASSWORD', '')
+        self.backup_dir = get_setting('BACKUP_LOCAL_DIRECTORY', os.getcwd())
+        self.remote_dir = get_setting('BACKUP_FTP_DIRECTORY', '')
+        self.remote_restore_dir = get_setting('RESTORE_FROM_FTP_DIRECTORY', self.remote_dir)
+        self.ftp_server = get_setting('BACKUP_FTP_SERVER', '')
+        self.ftp_username = get_setting('BACKUP_FTP_USERNAME', '')
+        self.ftp_password = get_setting('BACKUP_FTP_PASSWORD', '')
         self.private_key = getattr(settings, 'BACKUP_FTP_PRIVATE_KEY', None)
         self.directory_to_backup = getattr(settings, 'DIRECTORY_TO_BACKUP', settings.MEDIA_ROOT)
         self.rsyncnosymlink = getattr(settings, 'BACKUP_DISABLE_RSYNC_SYMLINK', False)  # Disable symlink directories when doing rsync backup
