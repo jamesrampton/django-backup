@@ -417,7 +417,7 @@ class Command(BaseBackupCommand):
                 self.stdout.write('Running Command: %s' % command)
                 os.system(command)
         except ImportError:
-            self.stderr.writeln('cleaned nothing, because BACKUP_DATABASE_COPIES is missing')
+            self.stderr.write('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing\n')
 
     def clean_remote_surplus_db(self):
         try:
@@ -439,9 +439,9 @@ class Command(BaseBackupCommand):
                         self.stdout.write('Removing {}'.format(target_path))
                         sftp.remove(target_path)
             except IOError:
-                self.stderr.writeln('Cleaned nothing, Remote dir doesn\'t exist')
+                self.stderr.write('Cleaned nothing, Remote dir doesn\'t exist\n')
         except ImportError:
-            self.stderr.writeln('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing')
+            self.stderr.write('Cleaned nothing, because BACKUP_DATABASE_COPIES is missing\n')
 
     def clean_surplus_db(self):
         self.clean_local_surplus_db()
@@ -471,7 +471,7 @@ class Command(BaseBackupCommand):
                 self.stdout.write('Running Command: %s' % command)
                 os.system(command)
         except ImportError:
-            self.stderr.writeln('cleaned nothing, because BACKUP_MEDIA_COPIES is missing')
+            self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
     def clean_remote_surplus_media(self):
         try:
@@ -494,7 +494,7 @@ class Command(BaseBackupCommand):
                     sftp.execute(command)
 
         except ImportError:
-            self.stderr.writeln('cleaned nothing, because BACKUP_MEDIA_COPIES is missing')
+            self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
     def do_media_rsync_backup(self):
         if self.rsyncnosymlink:
