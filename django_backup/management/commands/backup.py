@@ -597,7 +597,7 @@ class Command(BaseBackupCommand):
             sftp = self.get_connection()
             try:
                 self.stdout.write('Creating remote dir: %s' % self.remote_dir)
-                sftp.makedirs(self.remote_dir)
+                sftp.makedirs(self.remote_dir, 755)
             except IOError:
                 self.stderr.write('Failed to create remote dir: %s Attempting to continue\n' % self.remote_dir)
         else:
