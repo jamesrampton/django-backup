@@ -3,6 +3,7 @@ import time
 from copy import copy
 from datetime import datetime
 from optparse import make_option
+from paramiko import SSHException
 
 from django_backup.utils import (
     GOOD_RSYNC_FLAG,
@@ -481,7 +482,7 @@ class Command(BaseBackupCommand):
             self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
     def clean_remote_surplus_media(self):
-    
+
         self.ensure_remote_dir_exists()
         
         try:
@@ -501,7 +502,12 @@ class Command(BaseBackupCommand):
                     target_path = os.path.join(self.remote_dir, file_)
                     self._write('Removing %s' % target_path)
                     command = 'rm -r %s' % target_path
-                    sftp.execute(command)
+                    try:
+                        sftp.execute(command)
+                    except SSHException:
+                        # While testing it's too expensive to emulate a server with ssh and command line execution
+                        # ability. So we fallback to sftp.rmdir when "rm -r dir" is not possible.
+                        sftp.rmdir(target_path)
         except ImportError:
             self.stderr.write('Cleaned nothing, because BACKUP_MEDIA_COPIES is missing\n')
 
