@@ -113,7 +113,7 @@ class Command(BaseBackupCommand):
         if self.user:
             args += ["--user=%s" % self.user]
         if self.passwd:
-            args += ["--password=%s" % self.passwd]
+            args += ["--password='%s'" % self.passwd]
         if self.host:
             args += ["--host=%s" % self.host]
         if self.port:
