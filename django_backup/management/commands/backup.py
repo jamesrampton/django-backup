@@ -315,7 +315,7 @@ class Command(BaseBackupCommand):
             if remove_all:
                 self._write('=' * 70)
                 self._write('cleaning up local db and media backups')
-                command = 'rm -r %s' % remove_all
+                command = 'rm -rf %s' % remove_all
                 self._write('=' * 70)
                 self._write('Running Command: %s' % command)
                 os.system(command)
@@ -328,7 +328,7 @@ class Command(BaseBackupCommand):
             if remove_all:
                 self._write('=' * 70)
                 self._write('cleaning up local backups')
-                command = 'rm -r %s' % remove_all
+                command = 'rm -rf %s' % remove_all
                 self._write('=' * 70)
                 self._write('Running Command: %s' % command)
                 os.system(command)
@@ -474,7 +474,7 @@ class Command(BaseBackupCommand):
             if remove_all:
                 self._write('=' * 70)
                 self._write('cleaning up local media backups')
-                command = 'rm -r %s' % remove_all
+                command = 'rm -rf %s' % remove_all
                 self._write('=' * 70)
                 self._write('Running Command: %s' % command)
                 os.system(command)
@@ -501,7 +501,7 @@ class Command(BaseBackupCommand):
                 for file_ in remove_list:
                     target_path = os.path.join(self.remote_dir, file_)
                     self._write('Removing %s' % target_path)
-                    command = 'rm -r %s' % target_path
+                    command = 'rm -rf %s' % target_path
                     try:
                         sftp.execute(command)
                     except SSHException:
