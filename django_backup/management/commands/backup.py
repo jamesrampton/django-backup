@@ -371,6 +371,10 @@ class Command(BaseBackupCommand):
         blacklist_tables = self.get_blacklist_tables()
         if blacklist_tables:
             all_tables = connection.introspection.get_table_list(connection.cursor())
+            try:
+                all_tables = [table.name for table in all_tables]
+            except AttributeError:
+                pass
             tables = list(set(all_tables) - set(blacklist_tables))
             args += tables
         os.system('%s %s > %s' % (getattr(settings, 'BACKUP_SQLDUMP_PATH', 'mysqldump'), ' '.join(args), outfile))
