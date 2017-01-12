@@ -11,7 +11,7 @@ from django_backup.utils import BaseBackupCommand, TIME_FORMAT, is_db_backup, is
 class Command(BaseBackupCommand):
 
     help = "Restores latest backup."
-    option_list = BaseCommand.option_list + (
+    options = BaseBackupCommand.options + (
         make_option(
             '--media', '-m',
             action='store_true', default=False, dest='media',

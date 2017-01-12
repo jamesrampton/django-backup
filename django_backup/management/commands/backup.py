@@ -27,7 +27,7 @@ from django.db import connection
 
 class Command(BaseBackupCommand):
     
-    option_list = BaseCommand.option_list + (
+    options = BaseBackupCommand.options + (
         make_option(
             '--email',
             default=None, dest='email',
