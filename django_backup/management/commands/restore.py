@@ -92,7 +92,7 @@ class Command(BaseBackupCommand):
                 self.stdout.write('Doing Mysql restore to database %s from %s...' % (self.db, sql_local))
                 self.mysql_restore(sql_local)
             # TODO reinstate postgres support
-            elif self.engine == 'django.db.backends.postgresql_psycopg2':
+            elif self.engine == 'django.db.backends.postgresql_psycopg2' or self.engine == 'django.db.backends.postgresql':
                 self.stdout.write('Doing Postgresql restore to database %s from %s...' % (self.db, sql_local))
                 self.posgresql_restore(sql_local)
             else:
