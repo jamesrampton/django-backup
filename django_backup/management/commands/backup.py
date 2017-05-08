@@ -13,6 +13,7 @@ from django_backup.utils import (
     is_media_backup,
     is_backup,
     BaseBackupCommand,
+    DATABASE_ENGINES
 )
 
 
@@ -213,11 +214,10 @@ class Command(BaseBackupCommand):
         outfile = os.path.join(self.backup_dir, 'backup_%s.sql' % self.time_suffix)
 
         # Doing backup
-        if self.engine == 'django.db.backends.mysql':
+        if self.engine in DATABASE_ENGINES['mysql']:
             self._write('Doing Mysql backup to database %s into %s' % (self.db, outfile))
             self.do_mysql_backup(outfile)
-        # TODO reinstate postgres support
-        elif self.engine == 'django.db.backends.postgresql_psycopg2' or self.engine == 'django.db.backends.postgresql':
+        elif self.engine in DATABASE_ENGINES['postgresql']:
             self._write('Doing Postgresql backup to database %s into %s' % (self.db, outfile))
             self.do_postgresql_backup(outfile)
         else:

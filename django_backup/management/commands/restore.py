@@ -5,7 +5,7 @@ from tempfile import gettempdir
 
 from django.core.management.base import BaseCommand, CommandError
 
-from django_backup.utils import BaseBackupCommand, TIME_FORMAT, is_db_backup, is_media_backup
+from django_backup.utils import BaseBackupCommand, TIME_FORMAT, is_db_backup, is_media_backup, DATABASE_ENGINES
 
 
 class Command(BaseBackupCommand):
@@ -88,11 +88,10 @@ class Command(BaseBackupCommand):
                 self.uncompress_media(media_local)
         # Doing restore
         if not self.no_restore_database:
-            if self.engine == 'django.db.backends.mysql':
+            if self.engine in DATABASE_ENGINES['mysql']:
                 self.stdout.write('Doing Mysql restore to database %s from %s...' % (self.db, sql_local))
                 self.mysql_restore(sql_local)
-            # TODO reinstate postgres support
-            elif self.engine == 'django.db.backends.postgresql_psycopg2' or self.engine == 'django.db.backends.postgresql':
+            elif self.engine in DATABASE_ENGINES['postgresql']:
                 self.stdout.write('Doing Postgresql restore to database %s from %s...' % (self.db, sql_local))
                 self.posgresql_restore(sql_local)
             else:
