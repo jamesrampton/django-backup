@@ -15,6 +15,12 @@ DEFAULT_PORT = 22
 TIME_FORMAT = '%Y%m%d-%H%M%S'
 GOOD_RSYNC_FLAG = '__good_backup'
 regex = re.compile(r'(\d){8}-(\d){6}')
+DATABASE_ENGINES = {
+    'mysql': ['django.db.backends.mysql'],
+    'postgresql': ['django.db.backends.postgresql_psycopg2',
+                   'django.db.backends.postgresql',
+                   'django.contrib.gis.db.backends.postgis'],
+}
 
 
 def is_db_backup(filename):
