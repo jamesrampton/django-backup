@@ -198,8 +198,11 @@ class BaseBackupCommand(BaseCommand):
         self.rsyncnosymlink = getattr(settings, 'BACKUP_DISABLE_RSYNC_SYMLINK', False)  # Disable symlink directories when doing rsync backup
         
         # Convert remote dir to absolute path if necessary
-        if not self.remote_dir.startswith('/') and self.ftp_username:
-            self.remote_dir = '/home/%s/%s' % (self.ftp_username, self.remote_dir)
+        for attr in ['remote_dir', 'remote_restore_dir']:
+            value = getattr(self, attr)
+            if not value.startswith('/') and self.ftp_username:
+                absolute_path = '/home/%s/%s' % (self.ftp_username, value)
+                setattr(self, attr, absolute_path)
 
     def get_connection(self):
         """
