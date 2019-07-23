@@ -171,7 +171,6 @@ class Command(BaseBackupCommand):
                 'Please specify a password for your backup file'
                 ' using the BACKUP_PASSWORD environment variable.'
             )
-
         if self.clean_rsync:
             self._write('cleaning broken rsync backups')
             self.clean_broken_rsync()
@@ -492,6 +491,7 @@ class Command(BaseBackupCommand):
         try:
             sftp = self.get_connection()
             backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
+            backups = [str(b, 'utf8') for b in backups if isinstance(b, bytes)]
             backups = list(filter(is_media_backup, backups))
             backups.sort()
             self._write('=' * 70)
@@ -580,6 +580,7 @@ class Command(BaseBackupCommand):
         
         sftp = self.get_connection()
         backups = [i.strip() for i in sftp.execute('ls %s' % self.remote_dir)]
+        backups = [str(b, 'utf8') for b in backups if isinstance(b, bytes)]
         backups = list(filter(is_media_backup, backups))
         backups.sort()
         commands = []
@@ -596,6 +597,7 @@ class Command(BaseBackupCommand):
 
         # after we clean the backups, recreate the "current" symlink.
         backups = [i.strip() for i in sftp.execute('ls %s' % self.remote_dir)]
+        backups = [str(b, 'utf8') for b in backups if isinstance(b, bytes)]
         backups = list(filter(is_media_backup, backups))
         backups.sort()
         if backups:
