@@ -405,7 +405,7 @@ class Command(BaseBackupCommand):
         )
         if table_args:
             table_args = '-a %s' % table_args
-        pgdump_cmd = '%s %s %s > %s' % (pgdump_path, ' '.join(args), table_args or '--clean', outfile)
+        pgdump_cmd = '%s  --no-owner --no-privileges %s %s > %s' % (pgdump_path, ' '.join(args), table_args or '--clean', outfile)
         self._write(pgdump_cmd)
         os.system(pgdump_cmd)
 
