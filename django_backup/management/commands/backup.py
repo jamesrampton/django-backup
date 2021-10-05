@@ -491,7 +491,7 @@ class Command(BaseBackupCommand):
         try:
             sftp = self.get_connection()
             backups = [i.strip() for i in sftp.listdir(self.remote_dir)]
-            backups = [str(b, 'utf8') for b in backups if isinstance(b, bytes)]
+            backups = [str(b, 'utf8') if isinstance(b, bytes) else str(b) for b in backups]
             backups = list(filter(is_media_backup, backups))
             backups.sort()
             self._write('=' * 70)
