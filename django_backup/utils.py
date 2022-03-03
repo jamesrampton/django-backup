@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime, timedelta
+import fnmatch
 import os
 import re
 from django.conf import settings
@@ -33,6 +34,14 @@ def is_media_backup(filename):
 
 def is_backup(filename):
     return is_db_backup(filename) or is_media_backup(filename)
+
+
+def is_binlog(filename):
+    return fnmatch.fnmatch(filename, '{}.[!i]*'.format(getattr(settings, 'BACKUP_BINLOG_FILENAME', 'binlog')))
+
+
+def should_do_full_backup(self):
+    return False
 
 
 def get_date(filename):

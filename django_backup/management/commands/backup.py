@@ -12,6 +12,8 @@ from django_backup.utils import (
     is_db_backup,
     is_media_backup,
     is_backup,
+    is_binlog,
+    should_do_full_backup,
     BaseBackupCommand,
     DATABASE_ENGINES
 )
@@ -124,6 +126,13 @@ class Command(BaseBackupCommand):
             action='append', default=[], dest='apps',
             help='Optionally only back up certain Django apps'
         ),
+        make_option(
+            '--incremental',
+            action='store_true',
+            default=False,
+            dest='incremental',
+            help='Performs incremental backup and restore. Only the Mysql engine is implmented. Requires mysqlbinlog for backup and mysqladmin for restore.'
+        ),
     )
     help = "Backup database. Only Mysql and Postgresql engines are implemented"
 
@@ -165,6 +174,7 @@ class Command(BaseBackupCommand):
         self.no_local = options.get('no_local')
         self.delete_local = options.get('delete_local')
         self.apps = options.get('apps')
+        self.incremental = options.get('incremental')
 
         if self.zipencrypt and not self.encrypt_password:
             raise CommandError(
@@ -210,17 +220,31 @@ class Command(BaseBackupCommand):
         if not os.path.exists(self.backup_dir):
             os.makedirs(self.backup_dir)
 
-        outfile = os.path.join(self.backup_dir, 'backup_%s.sql' % self.time_suffix)
+        
 
         # Doing backup
-        if self.engine in DATABASE_ENGINES['mysql']:
-            self._write('Doing Mysql backup to database %s into %s' % (self.db, outfile))
-            self.do_mysql_backup(outfile)
-        elif self.engine in DATABASE_ENGINES['postgresql']:
-            self._write('Doing Postgresql backup to database %s into %s' % (self.db, outfile))
-            self.do_postgresql_backup(outfile)
+        if self.incremental:
+            if self.engine in DATABASE_ENGINES['mysql']:
+                outdir = self.backup_dir
+                outfile = os.path.join(outdir, 'backup_%s.sql' % self.time_suffix)
+                self._write('Doing incremental Mysql backup to database {} into {}'.format(self.db, outdir))
+                if not os.path.exists(outdir):
+                    os.makedirs(outdir)
+                if should_do_full_backup(self.backup_dir):
+                    self.do_mysql_backup(outfile, incremental=True)
+                self.do_incremental_mysql_backup(outdir)
+            else:
+                raise CommandError('Backup in %s engine not implemented' % self.engine)
         else:
-            raise CommandError('Backup in %s engine not implemented' % self.engine)
+            outfile = os.path.join(self.backup_dir, 'backup_%s.sql' % self.time_suffix)
+            if self.engine in DATABASE_ENGINES['mysql']:
+                self._write('Doing Mysql backup to database %s into %s' % (self.db, outfile))
+                self.do_mysql_backup(outfile)
+            elif self.engine in DATABASE_ENGINES['postgresql']:
+                self._write('Doing Postgresql backup to database %s into %s' % (self.db, outfile))
+                self.do_postgresql_backup(outfile)
+            else:
+                raise CommandError('Backup in %s engine not implemented' % self.engine)
 
         # Compressing backup
         if self.compress:
@@ -352,10 +376,10 @@ class Command(BaseBackupCommand):
         os.system('zip -P %s %s %s' % (self.encrypt_password, outfile, infile))
         os.system('rm %s' % infile)
 
-    def do_mysql_backup(self, outfile):
+    def do_mysql_backup(self, outfile, incremental=False):
 
         if self.apps:
-            raise NotImplementedError("Backuping up only ceratain apps not implemented in MySQL")
+            raise NotImplementedError("Backing up only certain apps not implemented in MySQL")
         args = []
         if self.user:
             args += ["--user='%s'" % self.user]
@@ -365,9 +389,13 @@ class Command(BaseBackupCommand):
             args += ["--host='%s'" % self.host]
         if self.port:
             args += ["--port=%s" % self.port]
+        if incremental == True:
+            args += ['--flush-logs --delete-master-logs --master-data=2 --add-drop-table --lock-all-tables']
         args += [self.db]
         base_args = copy(args)
         blacklist_tables = self.get_blacklist_tables()
+        if self.incremental and blacklist_tables:
+            raise NotImplementedError("Blacklisting tables with incremental backups not implemented")
         if blacklist_tables:
             all_tables = connection.introspection.get_table_list(connection.cursor())
             try:
@@ -385,6 +413,36 @@ class Command(BaseBackupCommand):
             args = base_args + ['-d'] + blacklist_tables
             cmd = '%s %s >> %s' % (getattr(settings, 'BACKUP_SQLDUMP_PATH', 'mysqldump'), ' '.join(args), outfile)
             os.system(cmd)
+
+    def do_incremental_mysql_backup(self, outdir):
+        print("doing incremental backups")
+        binlog_location = getattr(settings, 'BACKUP_BINLOG_LOCATION', '/var/lib/mysql')
+        mysqladmin_path = getattr(settings, 'BACKUP_SQLADMIN_PATH', 'mysqladmin')
+
+        args = []
+        if self.user:
+            args += ["--user='%s'" % self.user]
+        if self.passwd:
+            args += ["--password='%s'" % self.passwd]
+        if self.host:
+            args += ["--host='%s'" % self.host]
+        if self.port:
+            args += ["--port=%s" % self.port]
+        args += ['flush-logs']
+        # Flush logs so we're not grabbing the current, writeable binlog file
+
+        os.system('{} {}'.format(mysqladmin_path, ' '.join(args)))
+
+        binlogs = os.listdir(binlog_location)
+        binlogs = list(filter(is_binlog, binlogs))
+        binlogs.sort()
+        # Don't backup the latest file as that is being written to
+        binlogs.pop()
+
+        for binlog in binlogs:
+            if not os.path.exists(os.path.join(outdir, binlog)):
+                cmd = 'cp {}/{} {}'.format(binlog_location, binlog, os.path.join(outdir, binlog))
+                os.system(cmd)
 
     def do_postgresql_backup(self, outfile):
         args = []
